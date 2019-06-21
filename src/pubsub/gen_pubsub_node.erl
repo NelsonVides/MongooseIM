@@ -91,7 +91,7 @@
                                  Access :: atom()) ->
     {result, boolean()}.
 
--callback create_node(NodeIdx :: nodeIdx(), Owner :: jid:jid()) -> {result, {default, broadcast}}.
+-callback create_node(Backend :: atom(), NodeIdx :: nodeIdx(), Owner :: jid:jid()) -> {result, {default, broadcast}}.
 
 -callback delete_node(Nodes :: [pubsubNode(), ...]) ->
     {result,
@@ -108,10 +108,11 @@
             }
         }.
 
--callback purge_node(NodeIdx :: nodeIdx(), Owner :: jid:jid()) ->
+-callback purge_node(Backend :: atom(), NodeIdx :: nodeIdx(), Owner :: jid:jid()) ->
     {result, {default, broadcast}} | {error, exml:element()}.
 
--callback subscribe_node(NodeIdx :: nodeIdx(),
+-callback subscribe_node(Backend :: atom(),
+        NodeIdx :: nodeIdx(),
         Sender :: jid:jid(),
         Subscriber :: jid:ljid(),
         AccessModel :: accessModel(),
@@ -201,10 +202,10 @@
 -callback path_to_node(Path :: [nodeId()]) -> nodeId().
 
 -optional_callbacks([create_node_permission/6,
-                     create_node/2,
+                     create_node/3,
                      delete_node/1,
-                     purge_node/2,
-                     subscribe_node/8,
+                     purge_node/3,
+                     subscribe_node/9,
                      unsubscribe_node/5,
                      publish_item/9,
                      delete_item/4,
