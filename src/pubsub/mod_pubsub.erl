@@ -353,8 +353,10 @@ init_backend(ServerHost, Opts) ->
                      find_node_by_name, delete_node, get_subnodes,
                      get_subnodes_tree, get_parentnodes_tree
                     ],
-    {ok, ProxyBackend} = gen_mod:start_backend_module(mod_pubsub_db, Opts, TrackedDBFuns),
-    ProxyBackend:start(),
+    ProxyBackend = case gen_mod:start_backend_module(mod_pubsub_db, Opts, TrackedDBFuns) of
+        {ok, B} -> B:start(), B;
+        _ -> mod_pubsub_db_backend
+    end,
     {ok, ProxyCache} = maybe_start_cache_module(ServerHost, Opts),
     {ok, ProxyBackend, ProxyCache}.
 
@@ -2581,7 +2583,7 @@ delete_item(Host, Node, Publisher, ItemId) ->
 delete_item(_, _, <<>>, _, _, _) ->
     {error, extended_error(mongoose_xmpp_errors:bad_request(), <<"node-required">>)};
 delete_item(Backend, Host, Node, Publisher, ItemId, ForceNotify) ->
-    Action = fun(PubSubNode) -> delete_item_transaction(Host, Publisher, ItemId, PubSubNode) end,
+    Action = fun(PubSubNode) -> delete_item_transaction(Backend, Host, Publisher, ItemId, PubSubNode) end,
     case dirty(Backend, Host, Node, Action, ?FUNCTION_NAME) of
         {result, {TNode, {Result, broadcast}}} ->
             Nidx = TNode#pubsub_node.id,
@@ -2604,7 +2606,7 @@ delete_item(Backend, Host, Node, Publisher, ItemId, ForceNotify) ->
             Error
     end.
 
-delete_item_transaction(Host, Publisher, ItemId,
+delete_item_transaction(Backend, Host, Publisher, ItemId,
                         #pubsub_node{options = Options, type = Type, id = Nidx}) ->
     Features = plugin_features(Host, Type),
     case lists:member(<<"persistent-items">>, Features) of
@@ -2612,7 +2614,7 @@ delete_item_transaction(Host, Publisher, ItemId,
             case lists:member(<<"delete-items">>, Features) of
                 true ->
                     PublishModel = get_option(Options, publish_model),
-                    node_call(Host, Type, delete_item, [Nidx, Publisher, PublishModel, ItemId]);
+                    node_call(Host, Type, delete_item, [Backend, Nidx, Publisher, PublishModel, ItemId]);
                 false ->
                     {error,
                      extended_error(mongoose_xmpp_errors:feature_not_implemented(), unsupported, <<"delete-items">>)}
@@ -2753,20 +2755,28 @@ get_items_transaction(Backend, Host, From, RSM, SubId,
 
 %% EXPORTED
 get_items(Host, Node) ->
+    Backend = config(serverhost(Host), proxy_backend),
+    get_items(Backend, Host, Node).
+
+get_items(Backend, Host, Node) ->
     Action = fun (#pubsub_node{type = Type, id = Nidx}) ->
-                     node_call(Host, Type, get_items, [mod_pubsub_db_backend, Nidx, service_jid(Host), #{}])
+                     node_call(Host, Type, get_items, [Backend, Nidx, service_jid(Host), #{}])
              end,
-    case dirty(mod_pubsub_db_backend, Host, Node, Action, ?FUNCTION_NAME) of
+    case dirty(Backend, Host, Node, Action, ?FUNCTION_NAME) of
         {result, {_, {Items, _}}} -> Items;
         Error -> Error
     end.
 
 %% EXPORTED
 get_item(Host, Node, ItemId) ->
+    Backend = config(serverhost(Host), proxy_backend),
+    get_item(Backend, Host, Node, ItemId).
+
+get_item(Backend, Host, Node, ItemId) ->
     Action = fun (#pubsub_node{type = Type, id = Nidx}) ->
-                     node_call(Host, Type, get_item, [Nidx, ItemId])
+                     node_call(Host, Type, get_item, [Backend, Nidx, ItemId])
              end,
-    case dirty(mod_pubsub_db_backend, Host, Node, Action, ?FUNCTION_NAME) of
+    case dirty(Backend, Host, Node, Action, ?FUNCTION_NAME) of
         {result, {_, Items}} -> Items;
         Error -> Error
     end.
@@ -3027,7 +3037,7 @@ set_validated_affiliations_transaction(Backend, Host, #pubsub_node{ type = Type,
                           NewOwners = [NewOwner | Owners],
                           tree_call(Host,
                                     set_node,
-                                    [N#pubsub_node{owners = NewOwners}]);
+                                    [Backend, N#pubsub_node{owners = NewOwners}]);
                       ({JID, none}) ->
                           node_call(Host, Type, set_affiliation,
                                     [Backend, Nidx, JID, none]),
@@ -3037,7 +3047,7 @@ set_validated_affiliations_transaction(Backend, Host, #pubsub_node{ type = Type,
                                   NewOwners = Owners -- [OldOwner],
                                   tree_call(Host,
                                             set_node,
-                                            [N#pubsub_node{owners = NewOwners}]);
+                                            [Backend, N#pubsub_node{owners = NewOwners}]);
                               _ ->
                                   ok
                           end;
@@ -3725,7 +3735,7 @@ get_collection_subscriptions(Backend, Host, Node) ->
     end.
 
 get_node_subs_by_depth(Backend, Host, Node, From) ->
-    ParentTree = tree_call(Host, get_parentnodes_tree, [Host, Node, From]),
+    ParentTree = tree_call(Host, get_parentnodes_tree, [Backend, Host, Node, From]),
     [{Depth, [{N, get_node_subs(Backend, Host, N)} || N <- Nodes]} || {Depth, Nodes} <- ParentTree].
 
 get_node_subs(Backend, Host, #pubsub_node{type = Type, id = Nidx}) ->
@@ -4249,8 +4259,11 @@ maybe_start_cache_module(ServerHost, Opts) ->
     end.
 
 start_cache_module(ServerHost, Backend) ->
-    {ok, ProxyBackend} = gen_mod:start_backend_module(mod_pubsub_cache, [{backend, Backend}],
-         [upsert_last_item, delete_last_item, get_last_item]),
+    ProxyBackend = case gen_mod:start_backend_module(mod_pubsub_cache, [{backend, Backend}],
+                                                     [upsert_last_item, delete_last_item, get_last_item]) of
+                       {ok, C} -> C:start(ServerHost), C;
+                       _ -> mod_pubsub_cache_backend
+                   end,
     mod_pubsub_cache_backend:start(ServerHost),
     {ok, ProxyBackend}.
 
