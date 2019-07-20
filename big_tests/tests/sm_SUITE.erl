@@ -58,7 +58,7 @@ parallel_test_cases() ->
      resume_dead_session_results_in_item_not_found,
      aggressively_pipelined_resume,
      replies_are_processed_by_resumed_session,
-     subscription_requests_are_buffered_properly,
+     session_replace_does_not_retransmit,
      messages_are_properly_flushed_during_resumption
     ].
 
@@ -798,22 +798,12 @@ replies_are_processed_by_resumed_session(Config) ->
 %% 5. B doesn't SM-ack the request or message, terminates the connection
 %% 6. B reconnects but with session *replace*, not resume
 %% 7. Packet rerouting crashes on the buffered sub request, preventing resending whole buffer
-%% 8. B doesn't receive the buffered message
-subscription_requests_are_buffered_properly(Config) ->
-    AliceSpec = [{manual_ack, true}
-                 | escalus_fresh:create_fresh_user(Config, alice)],
-
+%% 8. B musn't receive the buffered message
+session_replace_does_not_retransmit(Config) ->
+    AliceSpec = [{manual_ack, true} | escalus_fresh:create_fresh_user(Config, alice)],
     MsgBody = <<"buffered">>,
-    SubPredFun = fun(S) ->
-                         escalus_pred:is_presence_with_type(<<"subscribe">>, S)
-                 end,
-    AvailablePredFun = fun(S) ->
-                               escalus_pred:is_presence_with_type(<<"available">>, S)
-                       end,
-    MsgPredFun = fun(S) ->
-                         escalus_pred:is_chat_message(MsgBody, S)
-                 end,
-
+    SubPredFun = fun(S) -> escalus_pred:is_presence_with_type(<<"subscribe">>, S) end,
+    AvailablePredFun = fun(S) -> escalus_pred:is_presence_with_type(<<"available">>, S) end,
     escalus:fresh_story(Config, [{bob, 1}], fun(Bob) ->
         % GIVEN Bob's pending subscription to Alice's presence
         AliceUser = proplists:get_value(username, AliceSpec),
@@ -841,15 +831,13 @@ subscription_requests_are_buffered_properly(Config) ->
         % ...and reconnects with session replacement.
         {ok, Alice2, _} = escalus_connection:start(AliceSpec),
 
-        % THEN Alice receives (without sending initial presence):
+        % THEN Alice DOES NOT receive anything, including
         % * buffered available presence (because it's addressed to full JID)
         % * buffered Bob's message (like above)
-        % Alice DOESN'T receive:
         % * buffered subscription request because it is dropped by ejabberd_sm
         %   because it's treated like repeated sub request to bare JID, so it's not
         %   processed by any sub req handler (like mod_roster) 
-        SubReqAndInitialPresence = escalus:wait_for_stanzas(Alice2, 2),
-        escalus:assert_many([AvailablePredFun, MsgPredFun], SubReqAndInitialPresence),
+        false = escalus_client:has_stanzas(Alice2),
 
         escalus_connection:stop(Alice2)
     end).
