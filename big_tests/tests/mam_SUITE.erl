@@ -265,13 +265,13 @@ elasticsearch_configs(_) ->
 
 basic_group_names() ->
     [
-     mam_all,
-     chat_markers,
-     muc_all,
-     muc_light,
-     prefs_cases,
-     impl_specific,
-     disabled_text_search
+     mam_all
+     % chat_markers,
+     % muc_all,
+     % muc_light
+     % prefs_cases,
+     % impl_specific,
+     % disabled_text_search
     ].
 
 all() ->
@@ -301,7 +301,8 @@ groups() ->
     Gs = [{full_group(C, G), Props, Tests}
           || C <- configurations(), {G, Props, Tests} <- basic_groups(),
              not is_skipped(C, G)],
-    ct_helper:repeat_all_until_all_ok(Gs).
+    Gs.
+    % ct_helper:repeat_all_until_all_ok(Gs).
 
 is_skipped(_, _) ->
     false.
@@ -310,13 +311,14 @@ is_skipped(_, _) ->
 basic_groups() ->
     [
      {mam_all, [parallel],
-           [{mam_metrics, [], mam_metrics_cases()},
-            {mam03, [parallel], mam_cases() ++ [retrieve_form_fields] ++ text_search_cases()},
-            {mam04, [parallel], mam_cases() ++ text_search_cases()},
-            {mam06, [parallel], mam_cases() ++ stanzaid_cases()},
-            {nostore, [parallel], nostore_cases()},
-            {archived, [parallel], archived_cases()},
-            {configurable_archiveid, [], configurable_archiveid_cases()},
+           [
+            % {mam_metrics, [], mam_metrics_cases()},
+            % {mam03, [parallel], mam_cases() ++ [retrieve_form_fields] ++ text_search_cases()},
+            % {mam04, [parallel], mam_cases() ++ text_search_cases()},
+            % {mam06, [parallel], mam_cases() ++ stanzaid_cases()},
+            % {nostore, [parallel], nostore_cases()},
+            % {archived, [parallel], archived_cases()},
+            % {configurable_archiveid, [], configurable_archiveid_cases()},
             {rsm_all, [], %% not parallel, because we want to limit concurrency
              [
               %% Functions mod_mam_utils:make_fin_element_v03/5 and make_fin_element/5
@@ -327,30 +329,33 @@ basic_groups() ->
               %% because there should not be a lot of cases running
               %% using parallel_story with the same user.
               %% Otherwise there would be a lot of presences sent between devices.
-              {rsm03,      [parallel], rsm_cases()},
-              {rsm04,      [parallel], rsm_cases()},
-              {rsm03_comp, [parallel], complete_flag_cases()},
-              {rsm04_comp, [parallel], complete_flag_cases()},
-              {with_rsm03, [parallel], with_rsm_cases()},
-              {with_rsm04, [parallel], with_rsm_cases()}]}]},
-     {chat_markers, [parallel], [archive_chat_markers,
-                                 dont_archive_chat_markers]},
-     {muc_all, [parallel],
-           [{muc03, [parallel], muc_cases() ++ muc_text_search_cases()},
-            {muc04, [parallel], muc_cases() ++ muc_text_search_cases()},
-            {muc06, [parallel], muc_cases() ++ muc_stanzaid_cases()},
-            {muc_configurable_archiveid, [], muc_configurable_archiveid_cases()},
-            {muc_rsm_all, [parallel],
-             [{muc_rsm03, [parallel], muc_rsm_cases()},
-              {muc_rsm04, [parallel], muc_rsm_cases()}]}]},
-     {muc_light,        [], muc_light_cases()},
-     {prefs_cases,      [parallel], prefs_cases()},
-     {impl_specific,    [], impl_specific()},
-     {disabled_text_search, [],
-         [
-          {mam03, [], disabled_text_search_cases()},
-          {mam04, [], disabled_text_search_cases()}
-         ]}
+              {rsm03,      [parallel, {repeat_until_any_fail, 100}], rsm_cases()},
+              {rsm04,      [parallel, {repeat_until_any_fail, 100}], rsm_cases()}
+              % {rsm03_comp, [parallel], complete_flag_cases()},
+              % {rsm04_comp, [parallel], complete_flag_cases()},
+              % {with_rsm03, [parallel], with_rsm_cases()},
+              % {with_rsm04, [parallel], with_rsm_cases()}
+             ]}
+           ]}
+     % {chat_markers, [parallel], [archive_chat_markers, dont_archive_chat_markers]},
+     % {muc_all, [parallel],
+           % [
+            % {muc03, [parallel], muc_cases() ++ muc_text_search_cases()},
+            % {muc04, [parallel], muc_cases() ++ muc_text_search_cases()},
+            % {muc06, [parallel], muc_cases() ++ muc_stanzaid_cases()},
+            % {muc_configurable_archiveid, [], muc_configurable_archiveid_cases()},
+            % {muc_rsm_all, [parallel],
+             % [{muc_rsm03, [parallel], muc_rsm_cases()},
+              % {muc_rsm04, [parallel], muc_rsm_cases()}]}
+           % ]},
+     % {muc_light,        [], muc_light_cases()}
+     % {prefs_cases,      [parallel], prefs_cases()},
+     % {impl_specific,    [], impl_specific()},
+     % {disabled_text_search, [],
+         % [
+          % {mam03, [], disabled_text_search_cases()},
+          % {mam04, [], disabled_text_search_cases()}
+         % ]}
     ].
 
 
@@ -2810,7 +2815,11 @@ check_user_exist(Config) ->
 
 parallel_story(Config, ResourceCounts, F) ->
     Config1 = override_for_parallel(Config),
-    escalus:story(Config1, ResourceCounts, F).
+    try
+        escalus:story(Config1, ResourceCounts, F)
+    catch
+        C:R:S -> ct:fail("Log it all: ~p~n~p~n~p~n", [C, R, S])
+    end.
 
 override_for_parallel(Config) ->
     Overrides = [
