@@ -312,13 +312,13 @@ basic_groups() ->
     [
      {mam_all, [parallel],
            [
-            % {mam_metrics, [], mam_metrics_cases()},
-            % {mam03, [parallel], mam_cases() ++ [retrieve_form_fields] ++ text_search_cases()},
-            % {mam04, [parallel], mam_cases() ++ text_search_cases()},
-            % {mam06, [parallel], mam_cases() ++ stanzaid_cases()},
-            % {nostore, [parallel], nostore_cases()},
-            % {archived, [parallel], archived_cases()},
-            % {configurable_archiveid, [], configurable_archiveid_cases()},
+            {mam_metrics, [], mam_metrics_cases()},
+            {mam03, [parallel, {repeat_until_any_fail, 10}], mam_cases() ++ [retrieve_form_fields] ++ text_search_cases()},
+            {mam04, [parallel, {repeat_until_any_fail, 10}], mam_cases() ++ text_search_cases()},
+            {mam06, [parallel, {repeat_until_any_fail, 10}], mam_cases() ++ stanzaid_cases()},
+            {nostore, [parallel], nostore_cases()},
+            {archived, [parallel], archived_cases()},
+            {configurable_archiveid, [], configurable_archiveid_cases()},
             {rsm_all, [], %% not parallel, because we want to limit concurrency
              [
               %% Functions mod_mam_utils:make_fin_element_v03/5 and make_fin_element/5
@@ -329,12 +329,12 @@ basic_groups() ->
               %% because there should not be a lot of cases running
               %% using parallel_story with the same user.
               %% Otherwise there would be a lot of presences sent between devices.
-              {rsm03,      [parallel, {repeat_until_any_fail, 100}], rsm_cases()},
-              {rsm04,      [parallel, {repeat_until_any_fail, 100}], rsm_cases()}
-              % {rsm03_comp, [parallel], complete_flag_cases()},
-              % {rsm04_comp, [parallel], complete_flag_cases()},
-              % {with_rsm03, [parallel], with_rsm_cases()},
-              % {with_rsm04, [parallel], with_rsm_cases()}
+              {rsm03,      [parallel, {repeat_until_any_fail, 10}], rsm_cases()},
+              {rsm04,      [parallel, {repeat_until_any_fail, 10}], rsm_cases()},
+              {rsm03_comp, [parallel, {repeat_until_any_fail, 10}], complete_flag_cases()},
+              {rsm04_comp, [parallel, {repeat_until_any_fail, 10}], complete_flag_cases()},
+              {with_rsm03, [parallel, {repeat_until_any_fail, 10}], with_rsm_cases()},
+              {with_rsm04, [parallel, {repeat_until_any_fail, 10}], with_rsm_cases()}
              ]}
            ]}
      % {chat_markers, [parallel], [archive_chat_markers, dont_archive_chat_markers]},
