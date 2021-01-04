@@ -2133,7 +2133,9 @@ privacy_check_packet(Acc, Packet, From, To, Dir, StateData) ->
 presence_broadcast(Acc, JIDSet, StateData) ->
     From = mongoose_acc:from_jid(Acc),
     lists:foldl(fun(JID, A) ->
-                          FJID = jid:make(JID),
+                          % jids were stored using jid:to_lower,
+                          % so we can be sure they were stringprepped already
+                          FJID = jid:make_noprep(JID),
                           {A1, Res} = privacy_check_packet(A, FJID, out, StateData),
                           case Res of
                               allow ->
@@ -2154,7 +2156,8 @@ presence_broadcast_to_trusted(Acc, StateData, From, T, A, Packet) ->
       fun(JID, Ac) ->
               case gb_sets:is_element(JID, T) of
                   true ->
-                      FJID = jid:make(JID),
+                      % jids were stored using jid:to_lower,
+                      FJID = jid:make_noprep(JID),
                       check_privacy_and_route_or_ignore(Ac, StateData, From, FJID, Packet, out);
                   _ ->
                       Ac
@@ -2169,7 +2172,7 @@ presence_broadcast_first(Acc0, From, StateData, Packet) ->
     Stanza = #xmlel{name = <<"presence">>,
         attrs = [{<<"type">>, <<"probe">>}]},
     Acc = gb_sets:fold(fun(JID, A) ->
-                           ejabberd_router:route(From, jid:make(JID), A, Stanza)
+                           ejabberd_router:route(From, jid:make_noprep(JID), A, Stanza)
                        end,
                Acc0,
                StateData#state.pres_t),
@@ -2179,7 +2182,8 @@ presence_broadcast_first(Acc0, From, StateData, Packet) ->
         false ->
             {As, AccFinal} = gb_sets:fold(
                    fun(JID, {A, Accum}) ->
-                           FJID = jid:make(JID),
+                           % jids were stored using jid:to_lower,
+                           FJID = jid:make_noprep(JID),
                            Accum1 = check_privacy_and_route_or_ignore(Accum, StateData, From, FJID,
                                                              Packet, out),
                            {gb_sets:add_element(JID, A), Accum1}
@@ -2217,7 +2221,8 @@ roster_change(Acc, IJID, ISubscription, StateData) ->
             ?LOG_DEBUG(#{what => roster_changed, roster_jid => LIJID,
                          acc => Acc, c2s_state => StateData}),
             From = StateData#state.jid,
-            To = jid:make(IJID),
+            % jids were stored using jid:to_lower,
+            To = jid:make_noprep(IJID),
             IsntInvisible = not StateData#state.pres_invis,
             ImAvailableTo = gb_sets:is_element(LIJID, StateData#state.pres_a),
             ImInvisibleTo = gb_sets:is_element(LIJID, StateData#state.pres_i),
@@ -2229,8 +2234,7 @@ roster_change(Acc, IJID, ISubscription, StateData) ->
                     ?LOG_DEBUG(#{what => become_available_to, roster_jid => LIJID,
                                  acc => Acc, c2s_state => StateData}),
                     Acc1 = check_privacy_and_route_or_ignore(Acc, StateData, From, To, P, out),
-                    A = gb_sets:add_element(LIJID,
-                                          StateData#state.pres_a),
+                    A = gb_sets:add_element(LIJID, StateData#state.pres_a),
                     NState = StateData#state{pres_a = A,
                                              pres_f = FSet,
                                              pres_t = TSet},
@@ -2580,7 +2584,7 @@ maybe_update_presence(Acc, StateData = #state{jid = JID, pres_f = Froms}, NewLis
 
     gb_sets:fold(
       fun(T, Ac) ->
-              send_unavail_if_newly_blocked(Ac, StateData, jid:make(T), NewList)
+              send_unavail_if_newly_blocked(Ac, StateData, jid:make_noprep(T), NewList)
       end, Acc, FromsExceptSelf).
 
 send_unavail_if_newly_blocked(Acc, StateData = #state{jid = JID},
