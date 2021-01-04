@@ -493,7 +493,7 @@ caps_delete_fun(Node) ->
     end.
 
 make_my_disco_hash(Host) ->
-    JID = jid:make(<<"">>, Host, <<"">>),
+    JID = jid:make_noprep(<<>>, Host, <<>>),
     case {mongoose_hooks:disco_local_features(Host, empty, JID, JID, <<"">>, <<"">>),
           mongoose_hooks:disco_local_identity(Host, [],
                                               JID, JID, <<"">>, <<"">>),
