@@ -2547,13 +2547,13 @@ Blocks are optional - the default is an empty string.</li>
 <li><strong>Syntax:</strong> TOML block, one or more <code>[[host_config]]</code> sections.</li>
 <li><strong>Example:</strong></li>
 </ul>
-<table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span></pre></div></td><td class="code"><div class="highlight"><pre><span></span><code>{host_config, &quot;
+<table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
+2
+3
+4
+5
+6
+7</pre></div></td><td class="code"><div class="highlight"><pre><span></span><code>{host_config, &quot;
 [[host_config]]
   host = \&quot;anonymous.localhost\&quot;
 
@@ -2562,6 +2562,7 @@ Blocks are optional - the default is an empty string.</li>
 &quot;}.
 </code></pre></div>
 </td></tr></table>
+
 <h3 id="auth_ldap">auth_ldap</h3>
 <ul>
 <li><strong>Type:</strong> block</li>
@@ -2569,17 +2570,18 @@ Blocks are optional - the default is an empty string.</li>
 <li><strong>Syntax:</strong> TOML block, the <code>[auth.ldap]</code> subsection</li>
 <li><strong>Example:</strong></li>
 </ul>
-<table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span></pre></div></td><td class="code"><div class="highlight"><pre><span></span><code>{auth_ldap, &quot;
+<table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
+2
+3
+4
+5</pre></div></td><td class="code"><div class="highlight"><pre><span></span><code>{auth_ldap, &quot;
   [auth.ldap]
     base = \&quot;ou=Users,dc=esl,dc=com\&quot;
     filter = \&quot;(objectClass=inetOrgPerson)\&quot;
 &quot;}.
 </code></pre></div>
 </td></tr></table>
+
 <h3 id="all_metrics_are_global">all_metrics_are_global</h3>
 <ul>
 <li><strong>Type:</strong> parameter</li>
@@ -2594,12 +2596,12 @@ Blocks are optional - the default is an empty string.</li>
 <li><strong>Syntax:</strong> TOML key-value pair with the <code>address</code> option</li>
 <li><strong>Example:</strong></li>
 </ul>
-<table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span></pre></div></td><td class="code"><div class="highlight"><pre><span></span><code>{s2s_addr, &quot;
+<table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
+2
+3
+4
+5
+6</pre></div></td><td class="code"><div class="highlight"><pre><span></span><code>{s2s_addr, &quot;
   address = [
     {host = \&quot;my.xmpp.org\&quot;, ip_address = \&quot;192.0.100.1\&quot;},
     {host = \&quot;your.xmpp.org\&quot;, ip_address = \&quot;192.0.1.100\&quot;, port = 5271}
@@ -2607,6 +2609,7 @@ Blocks are optional - the default is an empty string.</li>
 &quot;}.
 </code></pre></div>
 </td></tr></table>
+
 <h3 id="s2s_default_policy">s2s_default_policy</h3>
 <ul>
 <li><strong>Type:</strong> parameter</li>
@@ -2656,15 +2659,16 @@ Blocks are optional - the default is an empty string.</li>
 <li><strong>Syntax:</strong> TOML section: <code>[modules.mod_offline]</code></li>
 <li><strong>Example:</strong></li>
 </ul>
-<table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span></pre></div></td><td class="code"><div class="highlight"><pre><span></span><code>{mod_offline, &quot;
+<table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
+2
+3
+4</pre></div></td><td class="code"><div class="highlight"><pre><span></span><code>{mod_offline, &quot;
 [modules.mod_offline]
   access_max_user_messages = \&quot;max_user_offline_messages\&quot;
 &quot;}.
 </code></pre></div>
 </td></tr></table>
+
 <h3 id="mod_privacy">mod_privacy</h3>
 <ul>
 <li><strong>Type:</strong> block</li>
@@ -2693,15 +2697,16 @@ Blocks are optional - the default is an empty string.</li>
 <li><strong>Syntax:</strong> TOML section: <code>[modules.mod_vcard]</code></li>
 <li><strong>Example:</strong></li>
 </ul>
-<table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span></pre></div></td><td class="code"><div class="highlight"><pre><span></span><code>{mod_vcard, &quot;
+<table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
+2
+3
+4</pre></div></td><td class="code"><div class="highlight"><pre><span></span><code>{mod_vcard, &quot;
 [modules.mod_vcard]
   host = \&quot;vjud.@HOST@\&quot;
 &quot;}.
 </code></pre></div>
 </td></tr></table>
+
 <h3 id="sm_backend">sm_backend</h3>
 <ul>
 <li><strong>Type:</strong> parameter</li>
@@ -2716,15 +2721,16 @@ Blocks are optional - the default is an empty string.</li>
 <li><strong>Syntax:</strong> TOML key-value pairs</li>
 <li><strong>Example:</strong></li>
 </ul>
-<table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span></pre></div></td><td class="code"><div class="highlight"><pre><span></span><code>{tls_config, &quot;
+<table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
+2
+3
+4</pre></div></td><td class="code"><div class="highlight"><pre><span></span><code>{tls_config, &quot;
   tls.certfile = \&quot;priv/ssl/fake_server.pem\&quot;
   tls.mode = \&quot;starttls\&quot;
 &quot;}.
 </code></pre></div>
 </td></tr></table>
+
 <h3 id="auth_method">auth_method</h3>
 <ul>
 <li><strong>Type:</strong> parameter</li>

@@ -2409,15 +2409,16 @@
 <li><strong>Default:</strong> <code>"allow"</code></li>
 <li><strong>Example:</strong></li>
 </ul>
-<table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span></pre></div></td><td class="code"><div class="highlight"><pre><span></span><code>  <span class="n">host_policy</span> <span class="o">=</span> <span class="p">[</span>
+<table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
+2
+3
+4</pre></div></td><td class="code"><div class="highlight"><pre><span></span><code>  <span class="n">host_policy</span> <span class="o">=</span> <span class="p">[</span>
     <span class="p">{</span><span class="n">host</span> <span class="o">=</span> <span class="s">&quot;good.xmpp.org&quot;</span><span class="p">,</span> <span class="n">policy</span> <span class="o">=</span> <span class="s">&quot;allow&quot;</span><span class="p">},</span>
     <span class="p">{</span><span class="n">host</span> <span class="o">=</span> <span class="s">&quot;bad.xmpp.org&quot;</span><span class="p">,</span> <span class="n">policy</span> <span class="o">=</span> <span class="s">&quot;deny&quot;</span><span class="p">}</span>
   <span class="p">]</span>
 </code></pre></div>
 </td></tr></table>
+
 <p>Policy for opening new connections to/from specific remote servers.</p>
 <h3 id="s2suse_starttls"><code>s2s.use_starttls</code></h3>
 <ul>
@@ -2452,15 +2453,16 @@
 <li><strong>Default:</strong> not set</li>
 <li><strong>Example:</strong></li>
 </ul>
-<table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span></pre></div></td><td class="code"><div class="highlight"><pre><span></span><code>  <span class="n">domain_certfile</span> <span class="o">=</span> <span class="p">[</span>
+<table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
+2
+3
+4</pre></div></td><td class="code"><div class="highlight"><pre><span></span><code>  <span class="n">domain_certfile</span> <span class="o">=</span> <span class="p">[</span>
     <span class="p">{</span><span class="n">domain</span> <span class="o">=</span> <span class="s">&quot;localhost1.com&quot;</span><span class="p">,</span> <span class="n">certfile</span> <span class="o">=</span> <span class="s">&quot;cert1.pem&quot;</span><span class="p">},</span>
     <span class="p">{</span><span class="n">domain</span> <span class="o">=</span> <span class="s">&quot;localhost2.com&quot;</span><span class="p">,</span> <span class="n">certfile</span> <span class="o">=</span> <span class="s">&quot;cert2.pem&quot;</span><span class="p">}</span>
   <span class="p">]</span>
 </code></pre></div>
 </td></tr></table>
+
 <p>This option overrides the configured certificate file for specific local XMPP domains.</p>
 <p><strong>Notes:</strong></p>
 <ul>
@@ -2489,15 +2491,16 @@
 <li><strong>Default:</strong> <code>"allow"</code></li>
 <li><strong>Example:</strong></li>
 </ul>
-<table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span></pre></div></td><td class="code"><div class="highlight"><pre><span></span><code>  <span class="n">address</span> <span class="o">=</span> <span class="p">[</span>
+<table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span>1
+2
+3
+4</pre></div></td><td class="code"><div class="highlight"><pre><span></span><code>  <span class="n">address</span> <span class="o">=</span> <span class="p">[</span>
     <span class="p">{</span><span class="n">host</span> <span class="o">=</span> <span class="s">&quot;my.xmpp.org&quot;</span><span class="p">,</span> <span class="n">ip_address</span> <span class="o">=</span> <span class="s">&quot;192.0.100.1&quot;</span><span class="p">},</span>
     <span class="p">{</span><span class="n">host</span> <span class="o">=</span> <span class="s">&quot;your.xmpp.org&quot;</span><span class="p">,</span> <span class="n">ip_address</span> <span class="o">=</span> <span class="s">&quot;192.0.1.100&quot;</span><span class="p">,</span> <span class="n">port</span> <span class="o">=</span> <span class="mi">5271</span><span class="p">}</span>
   <span class="p">]</span>
 </code></pre></div>
 </td></tr></table>
+
 <p>This option defines IP addresses and port numbers for specific non-local XMPP domains, allowing to override the DNS lookup for outgoing S2S connections.</p>
 <h3 id="s2sciphers"><code>s2s.ciphers</code></h3>
 <ul>
