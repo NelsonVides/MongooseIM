@@ -25,7 +25,8 @@
 %%%----------------------------------------------------------------------
 -module (mod_carboncopy).
 -author ('ecestari@process-one.net').
--xep([{xep, 280}, {version, "0.10"}]).
+-xep([{xep, 280}, {version, "0.6"}]).
+-xep([{xep, 280}, {version, "0.13.1"}]).
 -behaviour(gen_mod).
 -behaviour(mongoose_module_metrics).
 
@@ -44,8 +45,6 @@
          remove_connection/5
         ]).
 
--define(NS_CC_2, <<"urn:xmpp:carbons:2">>).
--define(NS_CC_1, <<"urn:xmpp:carbons:1">>).
 -define(CC_KEY, 'cc').
 -define(CC_DISABLED, undefined).
 
@@ -130,59 +129,71 @@ user_receive_packet(Acc, JID, _From, To, Packet) ->
 % - registered to the user_send_packet hook, to be called only once even for multicast
 % - do not support "private" message mode, and do not modify the original packet in any way
 % - we also replicate "read" notifications
+-spec check_and_forward(jid:jid(), jid:jid(), exml:element(), sent | received) -> ok | stop.
 check_and_forward(JID, To, #xmlel{name = <<"message">>} = Packet, Direction) ->
     case classify_packet(Packet) of
         ignore -> stop;
-        forward  -> send_copies(JID, To, Packet, Direction)
+        forward -> send_copies(JID, To, Packet, Direction)
     end;
-
 check_and_forward(_JID, _To, _Packet, _) -> ok.
 
--spec classify_packet(_) -> classification().
+-spec classify_packet(exml:element()) -> classification().
 classify_packet(Packet) ->
-    is_chat(Packet).
+    is_private(Packet).
 
--spec is_chat(_) -> classification().
-is_chat(#xmlel{name = <<"message">>, attrs = Attrs} = Packet) ->
-    case xml:get_attr_s(<<"type">>, Attrs) of
-        <<"chat">> -> is_private(Packet);
-        _ -> ignore
-    end.
-
--spec is_private(_) -> classification().
+-spec is_private(exml:element()) -> classification().
 is_private(Packet) ->
-    case xml:get_subtag(Packet, <<"private">>) of
-        false -> is_no_copy(Packet);
+    case exml_query:subelement_with_name_and_ns(Packet, <<"private">>, ?NS_CC_2) of
+        undefined -> is_no_copy(Packet);
         _ -> ignore
     end.
 
--spec is_no_copy(_) -> classification().
+-spec is_no_copy(exml:element()) -> classification().
 is_no_copy(Packet) ->
-    case xml:get_subtag(Packet, <<"no-copy">>) of
-        false -> is_received(Packet);
+    case exml_query:subelement_with_name_and_ns(Packet, <<"no-copy">>, ?NS_HINTS) of
+        undefined -> is_chat(Packet);
         _ -> ignore
     end.
 
--spec is_received(_) -> classification().
-is_received(Packet) ->
-    case xml:get_subtag(Packet, <<"received">>) of
-        false -> is_sent(Packet);
+-spec is_chat(exml:element()) -> classification().
+is_chat(Packet) ->
+    case exml_query:attr(Packet, <<"type">>, <<"normal">>) of
+        <<"normal">> -> contains_body(Packet);
+        <<"chat">> -> is_not_received_nor_sent(Packet);
+        <<"groupchat">> -> ignore;
+        _ -> is_muc(Packet)
+    end.
+
+%% TODO: other muc rules?
+-spec is_muc(exml:element()) -> classification().
+is_muc(Packet) ->
+    case exml_query:subelement_with_name_and_ns(Packet, <<"x">>, ?NS_MUC_USER) of
+        undefined -> forward;
+        _ -> is_not_received_nor_sent(Packet)
+    end.
+
+-spec contains_body(exml:element()) -> classification().
+contains_body(Packet) ->
+    case exml_query:subelement(Packet, <<"body">>) of
+        undefined -> ignore;
+        _ -> forward
+    end.
+
+-spec is_not_received_nor_sent(exml:element()) -> classification().
+is_not_received_nor_sent(Packet) ->
+    case exml_query:subelement_with_name_and_ns(Packet, <<"received">>, ?NS_CC_2) of
+        undefined -> is_not_sent(Packet);
         _ -> ignore
     end.
 
--spec is_sent(_) -> classification().
-is_sent(Packet) ->
-    case xml:get_subtag(Packet, <<"sent">>) of
-        false -> forward;
-        SubTag -> is_forwarded(SubTag)
-    end.
-
--spec is_forwarded(_) -> classification().
-is_forwarded(SubTag) ->
-    case xml:get_subtag(SubTag, <<"forwarded">>) of
-        false -> forward;
+-spec is_not_sent(exml:element()) -> classification().
+is_not_sent(Packet) ->
+    case exml_query:subelement_with_name_and_ns(Packet, <<"sent">>, ?NS_CC_2) of
+        undefined -> forward;
         _ -> ignore
     end.
+
+%% TODO: forwardeds?
 
 remove_connection(Acc, LUser, LServer, LResource, _Status) ->
     JID = jid:make_noprep(LUser, LServer, LResource),
@@ -193,7 +204,13 @@ remove_connection(Acc, LUser, LServer, LResource, _Status) ->
 %%
 %% Internal
 %%
-is_bare_to(Direction, To, _PrioRes) ->
+
+%% If the original user is the only resource in the list of targets that means
+%% that he/she must have already received the message via normal routing:
+drop_singleton_jid(JID, [{JID, _CCVER}]) -> [];
+drop_singleton_jid(_JID, Targets)        -> Targets.
+
+is_bare_to(Direction, To) ->
     case {Direction, To} of
         {received, #jid{lresource = <<>>}} -> true;
         _ -> false
@@ -205,62 +222,63 @@ max_prio(PrioRes) ->
         _ -> 0
     end.
 
-is_max_prio(Res, PrioRes) ->
-    lists:member({max_prio(PrioRes), Res}, PrioRes).
+is_max_prio(MaxPrio, Res, PrioRes) ->
+    lists:member({MaxPrio, Res}, PrioRes).
 
-jids_minus_max_priority_resource(JID, CCResList, PrioRes) ->
+jids_minus_max_priority_resources(JID, CCResList, PrioRes) ->
+    MaxPrio = max_prio(PrioRes),
     [ {jid:replace_resource(JID, CCRes), CCVersion}
-      || {CCVersion, CCRes} <- CCResList, not is_max_prio(CCRes, PrioRes) ].
+      || {CCVersion, CCRes} <- CCResList, not is_max_prio(MaxPrio, CCRes, PrioRes) ].
 
-jids_minus_specific_resource(JID, R, CCResList, _PrioRes) ->
+jids_minus_specific_resource(#jid{lresource = R} = JID, CCResList) ->
     [ {jid:replace_resource(JID, CCRes), CCVersion}
       || {CCVersion, CCRes} <- CCResList, CCRes =/= R ].
 
-%% If the original user is the only resource in the list of targets
-%% that means that he/she must have already received the message via
-%% normal routing:
-drop_singleton_jid(JID, [{JID, _CCVER}]) -> [];
-drop_singleton_jid(_JID, Targets)        -> Targets.
-
-%% Direction = received | sent <received xmlns='urn:xmpp:carbons:1'/>
-send_copies(JID, To, Packet, Direction) ->
-    #jid{lresource = R} = JID,
-    {PrioRes, CCResList} = get_cc_enabled_resources(JID),
-    Targets = case is_bare_to(Direction, To, PrioRes) of
-                  true -> jids_minus_max_priority_resource
-                            (JID, CCResList, PrioRes);
-                  _    -> jids_minus_specific_resource(JID, R, CCResList, PrioRes)
+%% TODO: improve
+targets(JID, To, Direction) ->
+    AllSessions = ejabberd_sm:get_raw_sessions(JID),
+    CCResList = filter_cc_enabled_resources(AllSessions),
+    PrioRes = filter_priority_resources(AllSessions),
+    Targets0 = case is_bare_to(Direction, To) of
+                  true -> jids_minus_max_priority_resources(JID, CCResList, PrioRes);
+                  _    -> jids_minus_specific_resource(JID, CCResList)
               end,
+    Targets = drop_singleton_jid(JID, Targets0),
     ?LOG_DEBUG(#{what => cc_send_copies,
                  targets => Targets, resources => PrioRes, ccenabled => CCResList}),
+    Targets.
+
+%% Direction = received | sent <received xmlns='urn:xmpp:carbons:1'/>
+-spec send_copies(jid:jid(), jid:jid(), exml:element(), sent | received) -> ok.
+send_copies(JID, To, Packet, Direction) ->
+    Targets = targets(JID, To, Direction),
     lists:foreach(fun({Dest, Version}) ->
-                      #jid{lresource = Resource} = JID,
-                      ?LOG_DEBUG(#{what => cc_forwarding,
-                                   user => JID#jid.luser, server => JID#jid.lserver,
-                                   resource => Resource, exml_packet => Packet}),
-                      Sender = jid:replace_resource(JID, <<>>),
-                      New = build_forward_packet
-                              (JID, Packet, Sender, Dest, Direction, Version),
-                      ejabberd_router:route(Sender, Dest, New)
-              end, drop_singleton_jid(JID, Targets)),
-    ok.
+                          ?LOG_DEBUG(#{what => cc_forwarding,
+                                       user => JID#jid.luser, server => JID#jid.lserver,
+                                       resource => JID#jid.lresource, exml_packet => Packet}),
+                          Sender = jid:to_bare(JID),
+                          New = build_forward_packet(JID, Packet, Sender, Dest, Direction, Version),
+                          ejabberd_router:route(Sender, Dest, New)
+                  end, Targets).
 
 build_forward_packet(JID, Packet, Sender, Dest, Direction, Version) ->
+    % The wrapping message SHOULD maintain the same 'type' attribute value;
+    Type = exml_query:attr(Packet, <<"type">>, <<"normal">>),
     #xmlel{name = <<"message">>,
            attrs = [{<<"xmlns">>, <<"jabber:client">>},
-                    {<<"type">>, <<"chat">>},
+                    {<<"type">>, Type},
                     {<<"from">>, jid:to_binary(Sender)},
                     {<<"to">>, jid:to_binary(Dest)}],
            children = carbon_copy_children(Version, JID, Packet, Direction)}.
 
 carbon_copy_children(?NS_CC_1, JID, Packet, Direction) ->
-    [ #xmlel{name = list_to_binary(atom_to_list(Direction)),
+    [ #xmlel{name = atom_to_binary(Direction, utf8),
              attrs = [{<<"xmlns">>, ?NS_CC_1}]},
       #xmlel{name = <<"forwarded">>,
              attrs = [{<<"xmlns">>, ?NS_FORWARD}],
              children = [complete_packet(JID, Packet, Direction)]} ];
 carbon_copy_children(?NS_CC_2, JID, Packet, Direction) ->
-    [ #xmlel{name = list_to_binary(atom_to_list(Direction)),
+    [ #xmlel{name = atom_to_binary(Direction, utf8),
              attrs = [{<<"xmlns">>, ?NS_CC_2}],
              children = [ #xmlel{name = <<"forwarded">>,
                                  attrs = [{<<"xmlns">>, ?NS_FORWARD}],
@@ -291,7 +309,7 @@ complete_packet(From, #xmlel{name = <<"message">>, attrs = OrigAttrs} = Packet, 
     Attrs = lists:keystore(<<"xmlns">>, 1, OrigAttrs, {<<"xmlns">>, <<"jabber:client">>}),
     case proplists:get_value(<<"from">>, Attrs) of
         undefined ->
-            Packet#xmlel{attrs = [{<<"from">>, jid:to_binary(From)}|Attrs]};
+            Packet#xmlel{attrs = [{<<"from">>, jid:to_binary(From)} | Attrs]};
         _ ->
             Packet#xmlel{attrs = Attrs}
     end;
@@ -299,12 +317,6 @@ complete_packet(From, #xmlel{name = <<"message">>, attrs = OrigAttrs} = Packet, 
 complete_packet(_From, #xmlel{name = <<"message">>, attrs=OrigAttrs} = Packet, received) ->
     Attrs = lists:keystore(<<"xmlns">>, 1, OrigAttrs, {<<"xmlns">>, <<"jabber:client">>}),
     Packet#xmlel{attrs = Attrs}.
-
-get_cc_enabled_resources(JID) ->
-    AllSessions = ejabberd_sm:get_raw_sessions(JID),
-    CCs = filter_cc_enabled_resources(AllSessions),
-    Prios = filter_priority_resources(AllSessions),
-    {Prios, CCs}.
 
 filter_cc_enabled_resources(AllSessions) ->
     lists:filtermap(fun fun_filter_cc_enabled_resource/1, AllSessions).
